@@ -1,0 +1,40 @@
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX edm: <http://www.europeana.eu/schemas/edm/>
+PREFIX dbp: <http://dbpedia.org/property/>
+PREFIX dbo: <http://dbpedia.org/ontology/>
+PREFIX dbr: <http://dbpedia.org/resource/>
+
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+PREFIX dc: <http://purl.org/dc/elements/1.1/>
+PREFIX : <http://dbpedia.org/resource/>
+PREFIX dbpedia2: <http://dbpedia.org/property/>
+PREFIX dbpedia: <http://dbpedia.org/>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+
+select distinct count(distinct ?title ) ?artwork ?title  ?author ?author_name ?comment ?museum ?museum_name ?description  where {
+  OPTIONAL { ?artwork   a                dbo:Artwork } .
+             ?artwork   dbp:title        ?title .
+  OPTIONAL { ?artwork   rdfs:comment     ?comment } .
+  OPTIONAL { ?artwork   dbo:author         ?author .
+             ?author    dbo:birthName     ?author_name .} .
+
+  OPTIONAL { ?artwork   dbo:abstract     ?description } .
+  ?artwork   dbp:museum       ?museum  .
+             ?museum    dbo:location     dbr:Florence .
+   OPTIONAL { ?museum   dbp:name         ?museum_name } .
+
+
+     FILTER (lang(?title) = 'en')
+     FILTER (lang(?description) = 'en')
+     FILTER (lang(?comment) = 'en')
+
+}
+order by ?title
+
+
+
+

@@ -1,0 +1,1 @@
+from sparqlQuery import  sparqlQuery, sparqlQueryJson
