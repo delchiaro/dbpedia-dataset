@@ -102,7 +102,6 @@ def remove_key_from_dict(input_json_or_path, key_to_extract, near_additional_key
 
 
 
-# TODO: ftto così è inutile! None ritorna una stringa vuota in json. Verificare che convertendo da JSON a python la stringa vuota non torni un None, in tal caso eliminare questa funzione
 def _remove_empty_literals(node):
     if isinstance(node, dict):
         new_node = {}
@@ -143,51 +142,10 @@ def remove_empty_literals(input_json_or_path, output_json_path=None):
 
 
 
-class ListConversion(Enum):
-    keep_list = 0
-    keep_list_if_multiple_values = 1
-    pick_first = 2
-    concat = 3
 
 
-def listRefactor(string_with_list_splitter, list_splitter, list_conversion, list_concat_spacer="\n"):
-    if len(string_with_list_splitter) <= 0:
-        ret = None
-    elif list_conversion == ListConversion.keep_list_if_multiple_values:
-        if len(string_with_list_splitter) == 1:
-            ret = string_with_list_splitter[0]
-        else:
-            ret = string_with_list_splitter
-    elif list_conversion == ListConversion.keep_list:
-        ret = string_with_list_splitter
-    elif list_conversion == ListConversion.pick_first:
-        ret = string_with_list_splitter[0]
-    elif list_conversion == ListConversion.concat:
-        ret = string_with_list_splitter[0]
-        for d in string_with_list_splitter[1:]:
-            ret += list_concat_spacer + d
-    return ret
 
 
-class SparqlValueType(Enum):
-    uri = 0
-    literal = 1
 
 
-def sparqlDictRefactor(dictionary, key, list_conversion, list_concat_spacer="\n", only_sparql_type=None):
-    # type: (dict, list, ListConversion, str) -> dict
-    ret = None
-    if key in dictionary.keys():
-        if only_sparql_type is not None:
-            if only_sparql_type == SparqlValueType.uri and dictionary[key]["type"] != "uri":
-                return None
-            if only_sparql_type == SparqlValueType.literal and dictionary[key]["type"] != "literal":
-                return None
-
-        if isinstance(dictionary[key], dict) and isinstance(dictionary[key]["value"], list):
-            val_list = dictionary[key]["value"]
-            ret = listRefactor(val_list, list_conversion, list_concat_spacer)
-        else:
-            ret = dictionary[key]["value"]
-    return ret
 
