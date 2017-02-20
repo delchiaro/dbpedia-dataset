@@ -3,9 +3,9 @@ import time
 from enum import Enum
 
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
-from gpsAddressQuery import gpsToAddress
+from address import gpsToAddress
 
-from artwork.artwork import Artwork, Museum
+from artwork.artwork import Artwork, Museum, ArtworkDataset
 
 # Input
 from utils.listRefactor import *
@@ -97,7 +97,8 @@ def dbpediaJSON_to_artwork_list(json_file_or_string, out_json_file=None, doGpsTo
     #                    empty_rule=EmptyListRule.none_value,
     #                    list_reducer_func=lambda x, y: avg(float(x), float(y)))
 
-    artworkList = []
+    artworkList = ArtworkDataset()
+
 
     for r in jdata:
         artwork = Artwork()
@@ -272,13 +273,9 @@ def dbpediaJSON_to_artwork_list(json_file_or_string, out_json_file=None, doGpsTo
         if print_artwork:
             print vars(artwork)
 
-        artworkList.append(artwork)
+        artworkList.artworks.append(artwork)
 
-    if out_json_file is not None:
-        json_str = json.dumps(todict(artworkList))
-        json_file = open(out_json_file, "w")
-        json_file.write(json_str)
-        json_file.close()
+    artworkList.saveJson("artwork_dataset.json")
 
     return artworkList
 
