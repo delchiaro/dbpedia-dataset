@@ -7,20 +7,61 @@ from utils import todict
 
 
 class LatLng:
-    def __init__(self):
-        self.lat = None
-        self.lng = None
+    def __init__(self, lat = None, lng = None):
+        if lat is not None and lng is not None:
+            self.lat = lat
+            self.lng = lng
+        else:
+            self.lat = None
+            self.lng = None
+
+    @staticmethod
+    def loadFromDict(input_dict):
+        if isinstance(input_dict, dict):
+            ll = LatLng()
+            if "lat" in input_dict.keys() and "lng" in input_dict.keys():
+                ll.lat = input_dict["lat"]
+                ll.lng = input_dict["lng"]
+                return ll
+        if isinstance(input_dict, list):
+            ll_list = []
+            for d in input_dict:
+                ll_list.append(LatLng.loadFromDict(d))
+            return ll_list
+        return None
 
 
 class Author:
     def __init__(self):
         self.name = None
         self.uri = None
+        self.comment = None
+        self.abstract = None
+        self.movement = None
         self.nationality = None
         self.birthLocations = []
         self._birthLatLng = None
-        self.birthYear = None
-        self.deathYear = None
+        self.birthDate = None
+        self.deathDate = None
+
+    @staticmethod
+    def loadFromDict(input_dict):
+        if isinstance(input_dict, dict):
+            author = Author()
+            author.__dict__.update(input_dict)
+            if '_birthLatLng' in input_dict.keys():
+                author._birthLatLng=LatLng.loadFromDict(input_dict['_birthLatLng'])
+            # input_dict.pop('_birthLatLng')
+            return author
+
+        if isinstance(input_dict, list):
+            authors = []
+            for d in input_dict:
+                authors.append(Author.loadFromDict(d))
+            return authors
+
+        else:
+            return None
 
     @property
     def birthLatLng(self):
@@ -32,21 +73,51 @@ class Author:
         self._birthLatLng = latLng
 
 
+
+
+
 class Museum:
     def __init__(self):
         self.uri = None
-        self.name = []
-        self.latLng = None
+        self.name = None
+        self._latLng = None
         self.locations = []
+
+    @staticmethod
+    def loadFromDict(input_dict):
+        if isinstance(input_dict, dict):
+            museum = Museum()
+            museum.__dict__.update(input_dict)
+            if '_latLng' in input_dict.keys():
+                museum._latLng = LatLng.loadFromDict(input_dict['_latLng'])
+            # input_dict.pop('_latLng')
+            return museum
+
+        if isinstance(input_dict, list):
+            museums = []
+            for d in input_dict:
+                museums.append(Museum.loadFromDict(d))
+            return museums
+
+        else:
+            return None
+
 
     @property
     def latLng(self):
-        return self._latlng
+        return self._latLng
 
     @latLng.setter
     def latLng(self, latLng):
         # type: (LatLng) -> None
-        self._latlng = latLng
+        self._latLng = latLng
+
+    def setLatLng(self, lat, lng):
+        # type: (float, float) -> None
+        if lat is None and lng is None:
+            self._latLng = None
+        else:
+            self._latLng = LatLng(lat, lng)
 
 
 
@@ -59,14 +130,48 @@ class Artwork:
 
         self.comment = None
         self.description = None
-        #self.creationYear = None
-        self.currentLatLng = LatLng
-        #self.creationLatLng = LatLng
-        self.currentLocations = None
-        self.creationLocations = None
+        #self.creationYear = ""
 
-        self._museums = None
-        self._authors = None
+
+
+        self.currentLocations = []
+        self.creationLocations = []
+
+        self._museums = []
+        self._authors = []
+        self._currentLatLng = None
+        #self.creationLatLng = LatLng
+
+    @staticmethod
+    def loadFromDict(input_dict):
+        if isinstance(input_dict, dict):
+            artwork = Artwork()
+            artwork.__dict__.update(input_dict)
+            if "_currentLatLng" in input_dict.keys():
+                artwork._currentLatLng=LatLng.loadFromDict(input_dict["_currentLatLng"])
+            if "_museums" in input_dict.keys():
+                artwork._museums = Museum.loadFromDict(input_dict["_museums"])
+            if "_authors" in input_dict.keys():
+                artwork._authors = Author.loadFromDict(input_dict["_authors"])
+            return artwork
+        else:
+            return None
+
+    @property
+    def currentLatLng(self):
+        return self._currentLatLng
+
+    @currentLatLng.setter
+    def currentLatLng(self, latLng):
+        # type: (LatLng) -> None
+        self._currentLatLng = latLng
+
+    def setLatLng(self, lat, lng):
+        # type: (float, float) -> None
+        if lat is None or lng is  None:
+            self._currentLatLng = None
+        else:
+            self._currentLatLng = LatLng(lat, lng)
 
     def getTitle(self):
         if self.title is not None:
@@ -83,19 +188,19 @@ class Artwork:
 
     def addAuthor(self, author):
         # type: (Author) -> None
-        if self._authors is None:
-            self._authors = [author]
-        else:
-            self._authors.append(author)
-        return
+        if author is not None and author.uri is not None:
+            if self._authors is None:
+                self._authors = [author]
+            else:
+                self._authors.append(author)
 
     def addMuseum(self, museum):
         # type: (Museum) -> None
-        if self._museums is None:
-            self._museums = [museum]
-        else:
-            self._museums.append(museum)
-        return
+        if museum is not None and museum.uri is not None:
+            if self._museums is None:
+                self._museums = [museum]
+            else:
+                self._museums.append(museum)
 
     @property
     def museums(self):
@@ -349,7 +454,14 @@ class ArtworkDataset:
         else:
             return False
 
-    def loadJson(self):
+    def loadJson(self, json_or_path):
+        json_str = string_or_path(json_or_path)
+        list_of_dicts = json.loads(json_str)
+
+        for dict in list_of_dicts:
+            a = Artwork.loadFromDict(dict)
+            self.artworks.append( a )
+
         pass
 
     def saveImagesHDF5(self):

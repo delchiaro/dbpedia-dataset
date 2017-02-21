@@ -18,6 +18,7 @@ def sparqlQuery(myQuery, endpoint ="http://dbpedia.org/sparql", offset_limit = 1
     stop=False
     i=0
 
+    myQuery = string_or_path(myQuery)
 
     while stop==False:
         query = myQuery + "\nLIMIT " + str(offset_limit) + "\nOFFSET "+ str(i*offset_limit)

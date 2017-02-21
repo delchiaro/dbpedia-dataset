@@ -5,7 +5,7 @@ from enum import Enum
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
 from address import gpsToAddress
 
-from artwork.artwork import Artwork, Museum, ArtworkDataset
+from artwork.artwork import Artwork, Museum, ArtworkDataset, Author
 
 # Input
 from utils.listRefactor import *
@@ -43,7 +43,16 @@ QK_LOCATION = "dbo_location"
 QK_LOCATION_B = "dbp_location"
 
 QK_AUTHOR = "dbo_author"
-QK_AUTHOR = "dbo_author_birthName"
+QK_AUTHOR_BIRTH_NAME = "dbo_author_birthName"
+QK_AUTHOR_NAME = "dbo_author_name"
+QK_AUTHOR_NAME_2 = "dbp_author_name"
+QK_AUTHOR_NAME_3 = "foaf_author_name"
+QK_AUTHOR_ABSTRACT = "dbo_author_abstract"
+QK_AUTHOR_COMMENT = "rdfs_author_comment"
+QK_AUTHOR_MOVEMENT = "dbp_author_movement"
+QK_AUTHOR_BIRTH_DATE = "dbo_author_birthDate"
+QK_AUTHOR_DEATH_DATE = "dbo_author_deathDate"
+
 
 QK_MUS = "dbo_museum"
 QK_MUS_NAME = "foaf_museum_name"
@@ -111,28 +120,63 @@ def dbpediaJSON_to_artwork_list(json_file_or_string, out_json_file=None, doGpsTo
         # Try to get artwork name, artist name, ...                                                                           *
         # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         artwork.uri = r[QK_ARTWORK] # this field is not optional!
-
         artwork.title = list_in_dict_refactor(r, QK_TITLE, pickfirst)
+        artwork.description = list_in_dict_refactor(r, QK_DESCRIPTION, concatparag)
+        artwork.comment = list_in_dict_refactor(r, QK_COMMENT, concatparag)
+        artwork.thumb_link = list_in_dict_refactor(r, QK_THUMB, pickfirst)
+        artwork.img_link = list_in_dict_refactor(r, QK_IMG, pickfirst)
 
+        author = Author()
+        author.uri = list_in_dict_refactor(r, QK_AUTHOR, pickfirst)
+        author.abstract = list_in_dict_refactor(r, QK_AUTHOR_ABSTRACT, pickfirst)
+        author.comment = list_in_dict_refactor(r, QK_AUTHOR_COMMENT, pickfirst)
+        author.movement = list_in_dict_refactor(r, QK_AUTHOR_MOVEMENT, pickfirst)
+        author.birthDate = list_in_dict_refactor(r, QK_AUTHOR_BIRTH_DATE, pickfirst)
+        author.deathDateate = list_in_dict_refactor(r, QK_AUTHOR_DEATH_DATE, pickfirst)
+        author.name = list_in_dict_refactor(r, QK_AUTHOR_BIRTH_NAME, pickfirst)
+        if author.name is None:
+            author.name = list_in_dict_refactor(r, QK_AUTHOR_NAME, pickfirst)
+        if author.name is None:
+            author.name = list_in_dict_refactor(r, QK_AUTHOR_NAME_2, pickfirst)
+        if author.name is None:
+            author.name = list_in_dict_refactor(r, QK_AUTHOR_NAME_3, pickfirst)
+        artwork.addAuthor(author)
+
+        # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+        # Try to get museum info                                                                                              *
+        # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         mus = Museum()
         mus.uri = list_in_dict_refactor(r, QK_MUS, pickfirst)
         mus.name = list_in_dict_refactor(r, QK_MUS_NAME, pickfirst)
-        if mus.uri is not None:
-            artwork.addMuseum(mus)
 
-        artwork.description = list_in_dict_refactor(r, QK_DESCRIPTION, concatparag)
-        artwork.comment = list_in_dict_refactor(r, QK_COMMENT, concatparag)
+        if QK_MUS_LAT in r.keys() and QK_MUS_LNG in r.keys():
+            mus.setLatLng(list_in_dict_refactor(r, QK_MUS_LAT, pickfirst), list_in_dict_refactor(r, QK_MUS_LNG, pickfirst))
+        elif QK_MUS_LATLNG in r.keys():
+            i = 0
+            lat_sum = 0
+            lng_sum = 0
+            list_of_latlng = list_in_dict_refactor(r, QK_MUS_LATLNG, keeplist)
+            if list_of_latlng is not None:
+                for ll in list_of_latlng:
+                    latlng = ll.split(',')
+                    lat_sum += float(latlng[0])
+                    lng_sum += float(latlng[1])
+                    i += 1
+                if i > 0:
+                    mus.setLatLng(lat_sum / i, lng_sum / i)
 
-        artwork.thumb_link = list_in_dict_refactor(r, QK_THUMB, pickfirst)
-        artwork.img_link = list_in_dict_refactor(r, QK_IMG, pickfirst)
+        artwork.addMuseum(mus)
+
+
+
 
         # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         # Try to get GPS location of the artwork or, if not available, of the museum:                                         *
         # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         #  ARTWORK GPS:
         if QK_LAT in r.keys() and QK_LNG in r.keys():
-            artwork.currentLatLng.lat = list_in_dict_refactor(r, QK_LAT, pickfirst)
-            artwork.currentLatLng.lng = list_in_dict_refactor(r, QK_LNG, pickfirst)
+            artwork.setLatLng(list_in_dict_refactor(r, QK_LAT, pickfirst), list_in_dict_refactor(r, QK_LNG, pickfirst))
+
 
         elif QK_LATLNG in r.keys():
             i = 0
@@ -150,27 +194,10 @@ def dbpediaJSON_to_artwork_list(json_file_or_string, out_json_file=None, doGpsTo
                     artwork.currentLatLng.lng = lng_sum / i
 
         # MUSEUM GPS:
-        elif QK_MUS_LAT in r.keys() and QK_MUS_LNG in r.keys():
-            artwork.currentLatLng.lat = list_in_dict_refactor(r, QK_MUS_LAT, pickfirst)
-            artwork.currentLatLng.lat = list_in_dict_refactor(r, QK_MUS_LNG, pickfirst)
+        if artwork._currentLatLng is None and mus._latLng is not None:
+            artwork.currentLatLng = mus._latLng
 
-        elif QK_MUS_LATLNG in r.keys():
-            i = 0
-            lat_sum = 0
-            lng_sum = 0
-            list_of_latlng = list_in_dict_refactor(r, QK_MUS_LATLNG, keeplist)
-            if list_of_latlng is not None:
-                for ll in list_of_latlng:
-                    latlng = ll.split(',')
-                    lat_sum += float(latlng[0])
-                    lng_sum += float(latlng[1])
-                    i += 1
-                if i > 0:
-                    artwork.currentLatLng.lat = lat_sum / i
-                    artwork.currentLatLng.lng = lng_sum / i
-        else:
-            artwork.currentLatLng.lat = None
-            artwork.currentLatLng.lng = None
+
         # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 
@@ -275,7 +302,8 @@ def dbpediaJSON_to_artwork_list(json_file_or_string, out_json_file=None, doGpsTo
 
         artworkList.artworks.append(artwork)
 
-    artworkList.saveJson("artwork_dataset.json")
+    if isinstance(out_json_file, str):
+        artworkList.saveJson(out_json_file)
 
     return artworkList
 

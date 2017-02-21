@@ -1,21 +1,28 @@
 import os
 import shutil
 
+from artwork.artwork import ArtworkDataset
 from dbpediaJsonProcessing import dbpediaJSON_to_artwork_list
 from sparqlQuery import *
 from sparqlQuery.sparqlResultJsonRefactor import split_string_lists, remove_key_from_dict
 from utils import todict
 
 ENDPOINT = "http://dbpedia.org/sparql"
-QUERY = "dbpediaSparqlQuery/queries/query_big_noduplicate.txt"
-RESULT = "result.json"
-RESULT_PROCESSED = "result_processed.json"
+QUERY = "queries/query_big_noduplicate.txt"
 DATASET_PATH = "./dataset"
 
+RESULT = "result.json"
+RESULT_PROCESSED = "result_processed.json"
+RESULT_DATASET = "artwork_dataset.json"
+
+
+
 EXECUTE_QUERY = False
-EXECUTE_PROCESSING = True
+EXECUTE_PROCESSING = False
+MAKE_IMAGE_DATASET = False
+
 EXECUTE_GPS_TO_ADDRESS = False
-MAKE_IMAGE_DATASET = True
+
 
 SPLITTER_SYMBOL = " <~> "
 
@@ -33,5 +40,10 @@ if EXECUTE_PROCESSING:
 
 if MAKE_IMAGE_DATASET:
     artworkList = dbpediaJSON_to_artwork_list(json_file_or_string=RESULT_PROCESSED,
-                                out_json_file=RESULT_PROCESSED,
-                                doGpsToAddressQuery=EXECUTE_GPS_TO_ADDRESS)
+                                              out_json_file=RESULT_DATASET,
+                                              doGpsToAddressQuery=EXECUTE_GPS_TO_ADDRESS)
+
+
+ad = ArtworkDataset()
+ad.loadJson(RESULT_DATASET)
+print "ciao"
