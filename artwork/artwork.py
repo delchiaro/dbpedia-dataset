@@ -1,6 +1,9 @@
 import json
 import os
 import shutil
+from urllib2 import HTTPError, URLError
+
+import time
 from flickrDownloader import *
 
 from utils import todict
@@ -177,14 +180,13 @@ class Artwork:
         if self.title is not None:
             return self.title
         else:
-            return "<unknown-title>"
+            return ""
 
     def getAuthorName(self):
-        if self.authors is not None:
+        if self.authors is not None and len(self.authors) > 0:
             if self.authors[0].name is not None:
                 return self.authors[0].name
-        else:
-            return "<unknown-author>"
+        return ""
 
     def addAuthor(self, author):
         # type: (Author) -> None
@@ -225,7 +227,7 @@ class Artwork:
     def getQuery(self):
         query = self.getTitle()
         if self.getAuthorName() != "":
-            query += " " + self.getAuthorName
+            query += " " + self.getAuthorName()
         return query
 
     def getFolderName(self):  # type: (Artwork) -> str
@@ -233,6 +235,9 @@ class Artwork:
             return None
         else:
             return self.uri.replace("/", "^")
+
+    def getImageFileName(self):
+        return self.getFolderName()
 
     @staticmethod
     def folderNameToUri(str):  # type: (str) -> str
@@ -246,8 +251,6 @@ class ArtworkDataset:
         self._artworks = []
         self._datasetPath = "./dataset"
 
-    def retriveDbPediaThumbs(self):
-        pass
 
 
     @property
@@ -277,7 +280,8 @@ class ArtworkDataset:
         if os.path.isdir(self._datasetPath):
             shutil.rmtree(self._datasetPath)
 
-    def retriveGoogleImages(self, images_per_artwork=5, verbose=True, print_warnings=True, deep_verbose=True):
+
+    def downloadGoogleImages(self, images_per_artwork=5, sleep_between_artwork=0.1, verbose=True, print_warnings=True, deep_verbose=True):
         from googleImageDownloader import google_image_download
 
         artwork_without_uri = []
@@ -286,10 +290,12 @@ class ArtworkDataset:
         print("##########################################################################################")
         print("###############  G O O G L E    I M A G E S    D O W N L O A D I N G  ####################")
         print("##########################################################################################")
-        os.makedirs(self._datasetPath)
+        if not os.path.isdir(self._datasetPath):
+            os.makedirs(self._datasetPath)
 
         for artwork in self.artworks:
 
+            time.sleep(sleep_between_artwork)
             if artwork.uri is None:
                 artwork_without_uri.append(artwork)
                 if print_warnings or verbose:
@@ -304,9 +310,9 @@ class ArtworkDataset:
                 if verbose:
                     print("* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * ")
                     print("Downloading google images for:")
-                    print("Artwork Title  = {}".format(artwork.getTitle()))
-                    print("Artwork Author = {}".format(artwork.getAuthorName()))
-                    print("Artwork Uri    = {}".format(artwork.uri))
+                    print("Artwork Title  = {}".format(artwork.getTitle().encode('utf-8')))
+                    print("Artwork Author = {}".format(artwork.getAuthorName().encode('utf-8')))
+                    print("Artwork Uri    = {}".format(artwork.uri.encode('utf-8')))
 
 
                 query = artwork.getQuery()
@@ -316,14 +322,14 @@ class ArtworkDataset:
                 else:
                     path = os.path.join(self._datasetPath, artwork.getFolderName())
                     l = google_image_download(search_keyword=query,
-                                              n_downloads=images_per_artwork,
+                                              max_download_per_keyword=images_per_artwork,
                                               extension_blacklist=[".gif", ".png", ".svg"],
                                               extension_whitelist=[".jpg", ".jpeg"],
                                               replace_extension_not_in_whitelist=".jpg",
                                               download_img_path=path,
-                                              image_file_prefix=artwork.getFolderName() + "_google_",
+                                              image_file_prefix= "google___" + artwork.getImageFileName(),
                                               verbose=(deep_verbose and verbose),
-                                              print_warnings=print_warnings)
+                                              ignore_errors=not print_warnings)
                     n_downloads += len(l)
 
                 if verbose:
@@ -340,17 +346,19 @@ class ArtworkDataset:
 
 
 
-    def retriveFlickrImages(self, images_per_artwork=5, verbose=True, print_warnings=True, deep_verbose=True):
-        api_key = "flickr.apikey"
+    def downloadFlickrImages(self, api_key, images_per_artwork=5, sleep_between_artwork=0.1, verbose=True, print_warnings=True, deep_verbose=True):
         artwork_without_uri = []
         artwork_without_query = []
         n_downloads = 0
-        print("##########################################################################################")
-        print("###############  F L I C K R    P H O T O S    D O W N L O A D I N G  ####################")
-        print("##########################################################################################")
-        os.makedirs(self._datasetPath)
+        if verbose:
+            print("##########################################################################################")
+            print("###############  F L I C K R    P H O T O S    D O W N L O A D I N G  ####################")
+            print("##########################################################################################")
+        if not os.path.isdir(self._datasetPath):
+            os.makedirs(self._datasetPath)
 
         for artwork in self.artworks:
+            time.sleep(sleep_between_artwork)
 
             if artwork.uri is None:
                 artwork_without_uri.append(artwork)
@@ -366,9 +374,11 @@ class ArtworkDataset:
                 if verbose:
                     print("* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * ")
                     print("Downloading google images for:")
-                    print("Artwork Title  = {}".format(artwork.getTitle()))
-                    print("Artwork Author = {}".format(artwork.getAuthorName()))
-                    print("Artwork Uri    = {}".format(artwork.uri))
+                    print("Artwork Title  = {}".format(artwork.getTitle().encode('utf-8')))
+                    print("Artwork Author = {}".format(artwork.getAuthorName().encode('utf-8')))
+                    print("Artwork Uri    = {}".format(artwork.uri.encode('utf-8')))
+
+
 
 
                 query = artwork.getQuery()
@@ -379,12 +389,12 @@ class ArtworkDataset:
                     path = os.path.join(self._datasetPath, artwork.getFolderName())
                     l = flickr_photos_downloader(api_key_or_file_path=api_key,
                                                  query_text=query,
-                                                 n_images=n_downloads,
+                                                 n_images=images_per_artwork,
                                                  content_type=FlickrContentType.photos,
                                                  media=FlickrMedia.photos,
                                                  image_size=FlickrImageSize.longedge_640,
                                                  download_path=path,
-                                                 save_filename_prefix=artwork.getFolderName() + "_flickr_",
+                                                 save_filename_prefix="flickr___" + artwork.getImageFileName(),
                                                  verbose=(deep_verbose and verbose),
                                                  ignore_errors=not print_warnings)
                     n_downloads += len(l)
@@ -402,43 +412,66 @@ class ArtworkDataset:
             print("##########################################################################################")
 
 
-    def retriveDbPediaThumbs(self):
+    def downloadDbPediaThumbs(self, preferred_dim, sleep_between_artwork=0.1, verbose=True):
         import urllib
 
-
-        os.makedirs(self._datasetPath)
+        if verbose:
+            print("##########################################################################################")
+            print("###########   D B P E D I A    T H H U M B S    D O W N L O A D I N G   ##################")
+            print("##########################################################################################")
+        if not os.path.isdir(self._datasetPath):
+            os.makedirs(self._datasetPath)
 
         i = 0
-        duplicati = []
-        non_duplicati = []
+        not_thumb = 0
+        not_downloaded = 0
+
         for artwork in self.artworks:
-            print i
+            time.sleep(sleep_between_artwork)
+
+            if verbose:
+                print("* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * ")
+                print("Downloading google images ({}-th):".format(i))
+                print("Artwork Title  = {}".format(artwork.getTitle().encode('utf-8')))
+                print("Artwork Author = {}".format(artwork.getAuthorName().encode('utf-8')))
+                print("Artwork Uri    = {}".format(artwork.uri.encode('utf-8')))
             art_path = os.path.join(self._datasetPath, artwork.getFolderName())
-            if os.path.isdir(art_path):
-                duplicati.append(artwork)
+
+            if not os.path.isdir(art_path):
+                os.makedirs(art_path)
+
+            if preferred_dim is not None:
+                artwork_img_link = artwork.getThumbLink(preferred_dim)
+                head = "seed_w{}___".format(preferred_dim)
+            else:
+                artwork_img_link = artwork.getThumbLink()
+                head = "seed___"
+
+            if artwork_img_link is not None:
+                filename = head + artwork.getImageFileName() + "_"
+               # urllib.urlretrieve(urllib.unquote(artwork_img_link.encode('utf8', ':/')), art_path + "/" + filename)
+                not_downloaded += web_downloader([artwork_img_link.encode('utf8', ':/')], art_path, filename,
+                                                 forced_extension = ".jpg", verbose=verbose)
 
             else:
-                non_duplicati = []
-                os.makedirs(art_path)
-                artwork_img_link = artwork.getThumbLink(500)
-                if artwork_img_link is not None:
-                    filename = artwork.getAuthorName() + "-" + artwork.getTitle() + "-seed_w500.jpg"
-                    urllib.urlretrieve(urllib.unquote(artwork_img_link.encode('utf8', ':/')), art_path + "/" + filename)
+                not_thumb += 1
+                if verbose:
+                    print(" --- NOT DOWNLOADED --- [no link in artwork data] ")
+
+            if verbose:
+                print("* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * ")
+                print("\n")
+
             i += 1
 
-        print "duplicati: " + str(len(duplicati))
+        if verbose:
+            print("##########################################################################################")
+            print("DONE!")
+            print("Downloaded images -----------------> {}".format(i-not_thumb-not_downloaded))
+            print("Not downloaded for errors ---------> {}".format(not_downloaded))
+            print("Not downloaded for link missing ---> {}".format(not_thumb))
+            print("##########################################################################################")
 
-        json_str = json.dumps(todict(duplicati))
-        json_file = open("duplicati.json", "w")
-        json_file.write(json_str)
-        json_file.close()
-
-        print "non duplicati: " + str(len(non_duplicati))
-
-        json_str = json.dumps(todict(non_duplicati))
-        json_file = open("dataset_non_duplicati.json", "w")
-        json_file.write(json_str)
-        json_file.close()
 
 
     def remove_duplicate(self):
