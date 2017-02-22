@@ -1,0 +1,13 @@
+# File: /home/username/.local/share/nemo/actions/thunar_bulk_rename.nemo_action
+# Nemo Action to facilitate bulk renaming of selected files.
+# The file manager 'thunar' must be installed for its '--bulk-rename' facility.
+# Install Thunar with: sudo apt-get install thunar
+
+[Nemo Action]
+Name=dbpedia-uri-info
+Comment=Search info in the dbPedia dataset
+Exec=gnome-terminal --working-directory="/YOUR/PATH/TO/PROJECT/dbpedia-dataset" -e "bash -c \"python uri-info.py -u %f; read -n 1 -s -p \"..end..\"\""
+Icon-Name=gnome-terminal
+Selection=notnone
+Extensions=any;
+Quote=double

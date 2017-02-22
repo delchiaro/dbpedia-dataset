@@ -47,6 +47,11 @@ class Author:
         self.birthDate = None
         self.deathDate = None
 
+    def __str__(self):
+        return u"URI:   {}\n" \
+               u"name: {}\n" \
+               u"movement: {}\n".format(self.uri, self.name, self.movement)
+
     @staticmethod
     def loadFromDict(input_dict):
         if isinstance(input_dict, dict):
@@ -85,6 +90,10 @@ class Museum:
         self.name = None
         self._latLng = None
         self.locations = []
+
+    def __str__(self):
+        return u"URI:   {}\n" \
+               u"name: {}\n" .format(self.uri, self.name)
 
     @staticmethod
     def loadFromDict(input_dict):
@@ -144,6 +153,37 @@ class Artwork:
         self._authors = []
         self._currentLatLng = None
         #self.creationLatLng = LatLng
+
+    def __str__(self):
+        return self.getStrRepr()
+
+
+    def getStrRepr(self, show_descr=False, show_museums=False, show_authors=False):
+        ret =  u"URI:    {}\n" \
+               u"folder: {}\n" \
+               u"title:  {}\n" \
+               u"thumb:  {}\n" \
+               u"image:  {}\n" \
+               u"query:  {}\n" \
+            .format(self.uri, self.getFolderName(), self.title, self.thumb_link, self.img_link, self.getQuery())
+        if show_authors:
+            if self.authors is None or len(self.authors) == 0:
+                ret += u"\n\nauthor: <no-author>"
+            else:
+                for author in self.authors:
+                    ret += u"\n\n--- authors ---"
+                    ret += u"\n" + unicode(author)
+        if show_museums:
+            if self.museums is None or len(self.museums) == 0:
+                ret += u"\n\nmuseum: <no-museum>"
+            else:
+                ret += u"\n\n--- museums ---"
+                for museum in self.museums:
+                    ret += u"\n" + unicode(museum)
+
+        if show_descr:
+            ret+= u"\n\ndescription:  {}\n\ncomment: {}".format(self.description, self.comment)
+        return ret
 
     @staticmethod
     def loadFromDict(input_dict):
@@ -294,8 +334,10 @@ class ArtworkDataset:
             os.makedirs(self._datasetPath)
 
         for artwork in self.artworks:
-
+            if verbose and sleep_between_artwork > 0:
+                print("Sleeping for {} second{}".format(sleep_between_artwork, "" if int(sleep_between_artwork) == 1 else "s"))
             time.sleep(sleep_between_artwork)
+
             if artwork.uri is None:
                 artwork_without_uri.append(artwork)
                 if print_warnings or verbose:
@@ -358,6 +400,8 @@ class ArtworkDataset:
             os.makedirs(self._datasetPath)
 
         for artwork in self.artworks:
+            if verbose and sleep_between_artwork > 0:
+                print("Sleeping for {} second{}".format(sleep_between_artwork, "" if sleep_between_artwork == 1 else "s"))
             time.sleep(sleep_between_artwork)
 
             if artwork.uri is None:
@@ -427,6 +471,8 @@ class ArtworkDataset:
         not_downloaded = 0
 
         for artwork in self.artworks:
+            if verbose and sleep_between_artwork > 0:
+                print("Sleeping for {} second{}".format(sleep_between_artwork, "" if sleep_between_artwork == 1 else "s"))
             time.sleep(sleep_between_artwork)
 
             if verbose:

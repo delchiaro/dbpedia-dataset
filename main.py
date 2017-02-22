@@ -14,7 +14,8 @@ DATASET_PATH = "./dataset"
 
 RESULT = "sparql_query_result.json"
 RESULT_PROCESSED = "processing_result.json"
-RESULT_DATASET = "artwork_dataset.json"
+#RESULT_DATASET = "artwork_dataset.json"
+RESULT_DATASET = "artwork_dataset_goodquery.json"
 
 
 
@@ -35,7 +36,7 @@ SPLITTER_SYMBOL = " <~> "
 
 
 def main(sparql_query=False, processing=False, make_img_dataset=False, gps_request_in_dataset=False,
-         download_images=False, dbpedia=False, google=False, flickr=False):
+         dbpedia=False, dbpedia_width=800, google=0, flickr=0, sleep_between_artwork_download=0.5):
 
     if sparql_query:
         sparqlQueryJson(QUERY, output_json_file_path=RESULT, endpoint=ENDPOINT, offset_limit=1000)
@@ -56,19 +57,19 @@ def main(sparql_query=False, processing=False, make_img_dataset=False, gps_reque
 
 
 
-    if download_images:
+    if dbpedia or google>0 or flickr>0:
 
         ad = ArtworkDataset()
         ad.loadJson(RESULT_DATASET)
 
         if dbpedia:
-            ad.downloadDbPediaThumbs(preferred_dim=800, sleep_between_artwork=2)
+            ad.downloadDbPediaThumbs(preferred_dim=dbpedia_width, sleep_between_artwork=sleep_between_artwork_download)
 
-        if google:
-            ad.downloadGoogleImages(images_per_artwork=4, sleep_between_artwork=2)
+        if google>0:
+            ad.downloadGoogleImages(images_per_artwork=google, sleep_between_artwork=sleep_between_artwork_download)
 
-        if flickr:
-            ad.downloadFlickrImages(api_key="flickr.apikey", images_per_artwork=6, sleep_between_artwork=2)
+        if flickr>0:
+            ad.downloadFlickrImages(api_key="flickr.apikey", images_per_artwork=flickr, sleep_between_artwork=sleep_between_artwork_download)
 
 
 if __name__ == "__main__":
@@ -92,11 +93,19 @@ if __name__ == "__main__":
     parser.add_argument("-dbpedia", "--dbpedia-images", action='store_const', const=True, dest='dbpedia', default=False,
                         help="Execute image download")
 
-    parser.add_argument("-google", "--google-images", action='store_const', const=True, dest='google', default=False,
-                        help="Execute image download")
 
-    parser.add_argument("-flickr", "--flickr-images", action='store_const', const=True, dest='flickr', default=False,
-                        help="Execute image download")
+    parser.add_argument("-sleep", "--sleep-time", action='store', dest='sleep_time', default=0.5, type=float,
+                        help="Specify the number of seconds to sleep between the download of an artwork images and the next artwork images")
+
+
+    parser.add_argument("-w", "--dbpedia-width", action='store', dest='dbpedia_width', default=800,
+                        help="Specify the preferred width for the images downloaded from dbpedia")
+
+    parser.add_argument("-google", "--google-images", action='store', dest='google', default=0, type=int,
+                        help="Download the specified number of images from google, for each artwork in dataset.")
+
+    parser.add_argument("-flickr", "--flickr-images", action='store', dest='flickr', default=0, type=int,
+                        help="Download the specified number of images from google, for each artwork in dataset.")
 
     args=parser.parse_args()
 
@@ -111,8 +120,9 @@ if __name__ == "__main__":
 
          gps_request_in_dataset=args.gps_request_in_dataset,
 
-         download_images=(args.dbpedia or args.google or args.flickr),
          dbpedia=args.dbpedia,
+         dbpedia_width=args.dbpedia_width,
          google=args.google,
-         flickr=args.flickr)
+         flickr=args.flickr,
+         sleep_between_artwork_download=args.sleep_time)
 
