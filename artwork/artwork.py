@@ -2,9 +2,9 @@ import json
 import os
 import shutil
 from urllib2 import HTTPError, URLError
-
+from utils import string_or_path
 import time
-from flickrDownloader import *
+
 
 from utils import todict
 
@@ -274,22 +274,27 @@ class Artwork:
         if self.uri is None:
             return None
         else:
-            return self.uri.replace("/", "^")
+            return Artwork.uriToFolderName(self.uri)
 
     def getImageFileName(self):
         return self.getFolderName()
 
     @staticmethod
-    def folderNameToUri(str):  # type: (str) -> str
-        return str.split("/")[-1].replace("/", "^")
+    def folderNameToUri(folder_name):  # type: (str) -> str
+        return folder_name.split("/")[-1].replace("/", "^")
 
-
+    @staticmethod
+    def uriToFolderName(uri):
+        return uri.replace("/", "^")
 
 class ArtworkDataset:
 
-    def __init__(self, img_path="./dataset", seed_prefix="dbpseed_", gimg_prefix="google_", flickr_prefix="flickr_"):
+    def __init__(self, img_path="./dataset", seed_prefix="seed_", gimg_prefix="google_", flickr_prefix="flickr_"):
         self._artworks = []
-        self._datasetPath = "./dataset"
+        self._datasetPath = img_path
+        self._seed_prefix = seed_prefix
+        self._gimg_prefix = gimg_prefix
+        self._flickr_prefix = flickr_prefix
 
 
 
@@ -321,7 +326,8 @@ class ArtworkDataset:
             shutil.rmtree(self._datasetPath)
 
 
-    def downloadGoogleImages(self, images_per_artwork=5, sleep_between_artwork=0.1, verbose=True, print_warnings=True, deep_verbose=True):
+    def downloadGoogleImages(self, images_per_artwork=5, sleep_between_artwork=0.1, verbose=True, print_warnings=True,
+                             google_localization=".it", deep_verbose=True):
         from googleImageDownloader import google_image_download
 
         artwork_without_uri = []
@@ -330,13 +336,24 @@ class ArtworkDataset:
         print("##########################################################################################")
         print("###############  G O O G L E    I M A G E S    D O W N L O A D I N G  ####################")
         print("##########################################################################################")
+        print("Using: google" + google_localization)
+
         if not os.path.isdir(self._datasetPath):
             os.makedirs(self._datasetPath)
 
+        # continue_from_stopped = False
+
         for artwork in self.artworks:
+            # if artwork.title.startswith("Three Heads Six Arms"):
+            #     continue_from_stopped = True
+            # if continue_from_stopped == False:
+            #     continue
+
             if verbose and sleep_between_artwork > 0:
                 print("Sleeping for {} second{}".format(sleep_between_artwork, "" if int(sleep_between_artwork) == 1 else "s"))
             time.sleep(sleep_between_artwork)
+
+
 
             if artwork.uri is None:
                 artwork_without_uri.append(artwork)
@@ -369,9 +386,12 @@ class ArtworkDataset:
                                               extension_whitelist=[".jpg", ".jpeg"],
                                               replace_extension_not_in_whitelist=".jpg",
                                               download_img_path=path,
-                                              image_file_prefix= "google___" + artwork.getImageFileName(),
+                                              image_file_prefix=self._gimg_prefix + artwork.getImageFileName(),
+                                              google_localization=google_localization,
                                               verbose=(deep_verbose and verbose),
-                                              ignore_errors=not print_warnings)
+                                              ignore_errors=not print_warnings,
+                                              if_error_download_another=True,
+                                              image_download_timeout=2)
                     n_downloads += len(l)
 
                 if verbose:
@@ -389,6 +409,7 @@ class ArtworkDataset:
 
 
     def downloadFlickrImages(self, api_key, images_per_artwork=5, sleep_between_artwork=0.1, verbose=True, print_warnings=True, deep_verbose=True):
+        from flickrDownloader import *
         artwork_without_uri = []
         artwork_without_query = []
         n_downloads = 0
@@ -438,7 +459,7 @@ class ArtworkDataset:
                                                  media=FlickrMedia.photos,
                                                  image_size=FlickrImageSize.longedge_640,
                                                  download_path=path,
-                                                 save_filename_prefix="flickr___" + artwork.getImageFileName(),
+                                                 save_filename_prefix=self._flickr_prefix + artwork.getImageFileName(),
                                                  verbose=(deep_verbose and verbose),
                                                  ignore_errors=not print_warnings)
                     n_downloads += len(l)
@@ -458,7 +479,7 @@ class ArtworkDataset:
 
     def downloadDbPediaThumbs(self, preferred_dim, sleep_between_artwork=0.1, verbose=True):
         import urllib
-
+        from flickrDownloader import web_downloader
         if verbose:
             print("##########################################################################################")
             print("###########   D B P E D I A    T H H U M B S    D O W N L O A D I N G   ##################")
@@ -488,10 +509,10 @@ class ArtworkDataset:
 
             if preferred_dim is not None:
                 artwork_img_link = artwork.getThumbLink(preferred_dim)
-                head = "seed_w{}___".format(preferred_dim)
+                head = self._seed_prefix + "_w{}__".format(preferred_dim)
             else:
                 artwork_img_link = artwork.getThumbLink()
-                head = "seed___"
+                head = self._seed_prefix + "__"
 
             if artwork_img_link is not None:
                 filename = head + artwork.getImageFileName() + "_"

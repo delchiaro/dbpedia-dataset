@@ -10,7 +10,7 @@ from utils import todict
 
 ENDPOINT = "http://dbpedia.org/sparql"
 QUERY = "queries/query_big_noduplicate.txt"
-DATASET_PATH = "./dataset"
+DATASET_PATH = "./dataset/dataset_new/"
 
 RESULT = "sparql_query_result.json"
 RESULT_PROCESSED = "processing_result.json"
@@ -59,14 +59,15 @@ def main(sparql_query=False, processing=False, make_img_dataset=False, gps_reque
 
     if dbpedia or google>0 or flickr>0:
 
-        ad = ArtworkDataset()
+        ad = ArtworkDataset(img_path=DATASET_PATH)
         ad.loadJson(RESULT_DATASET)
 
         if dbpedia:
             ad.downloadDbPediaThumbs(preferred_dim=dbpedia_width, sleep_between_artwork=sleep_between_artwork_download)
 
         if google>0:
-            ad.downloadGoogleImages(images_per_artwork=google, sleep_between_artwork=sleep_between_artwork_download)
+            ad.downloadGoogleImages(images_per_artwork=google, sleep_between_artwork=sleep_between_artwork_download,
+                                    google_localization=".it")
 
         if flickr>0:
             ad.downloadFlickrImages(api_key="flickr.apikey", images_per_artwork=flickr, sleep_between_artwork=sleep_between_artwork_download)
