@@ -1,29 +1,60 @@
+import codecs
+
 from artwork.artwork import ArtworkDataset
 
 
-DATASET_PATH = "./dataset/dataset_new/"
-RESULT_DATASET = "artwork_dataset_goodquery.json"
-OUTPUT_TXT = "documents.txt"
-
+ARTWORK_DATASET = "data/artwork_dataset_filtered_ordered.json"
+OUTPUT_TXT = "data/documents.txt"
+CLASS_FILTER_TXT = "data/list_of_included_classes.txt"
+CLASS_NAMES_FILTER_TXT = "data/list_of_included_class_names.txt"
 
 
 def main():
     doc_processing =  lambda str: str.replace('\n', '')
-    prepare_docs(OUTPUT_TXT, doc_processing)
+    filter = txt_to_list(CLASS_FILTER_TXT)
+    filter = [int(f) for f in filter]
+    filter_names = txt_to_list(CLASS_NAMES_FILTER_TXT)
+    prepare_docs(OUTPUT_TXT, doc_processing, include_classes_filter=filter, class_filter_per_name=filter_names)
 
-def prepare_docs(out_file, lambda_on_doc_str=None):
-    ad = ArtworkDataset(img_path=DATASET_PATH)
-    ad.loadJson(RESULT_DATASET)
+def txt_to_list(file_path, splitter='\n'):
+    inf = codecs.open(file_path, 'r', encoding='utf-8')
+    str = inf.read()
+    inf.close()
+    return str.split(splitter)
+
+
+
+
+def prepare_docs(out_file, lambda_on_doc_str=None, include_classes_filter=None, class_filter_per_name=None):
+    # type: (basestring, callable(basestring), list[int], list[basestring]) -> None
+    ad = ArtworkDataset()
+    ad.loadJson(ARTWORK_DATASET)
 
     outf = file(out_file, mode='w')
 
-    for artwork in ad.artworks:
+    for class_index, artwork in enumerate(ad.artworks):
+
+        if include_classes_filter is not None:
+
+
+            if class_index not in include_classes_filter:
+                continue #skip this class!
+            else:
+                print(u"Included class:  " + unicode(class_index))
+                i = include_classes_filter.index(class_index)
+                print(u"With class name: " + unicode(class_filter_per_name[i]))
+                print("")
+                #ust for check:
+                if class_filter_per_name is not None:
+                    folder_uri = artwork.getFolderName()
+                    if folder_uri != class_filter_per_name[i]:
+                        raise ValueError("Wow... stop it! Probably class index not corresponding from dataset to training set?")
+
         title = artwork.title
         descr = artwork.description
         comment = artwork.comment
         authors = artwork.authors
         #locations = artwork.currentLocations
-
 
 
         if comment is None:

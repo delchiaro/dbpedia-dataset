@@ -561,8 +561,8 @@ class ArtworkDataset:
         for dict in list_of_dicts:
             a = Artwork.loadFromDict(dict)
             self.artworks.append( a )
+        return self
 
-        pass
 
     def saveImagesHDF5(self):
         pass

@@ -3,6 +3,7 @@ import shutil
 from argparse import ArgumentParser
 
 from artwork.artwork import ArtworkDataset
+from dataset_filtering import artwork_dataset_filtering
 from dbpediaJsonProcessing import dbpediaJSON_to_artwork_list
 from sparqlQuery import *
 from sparqlQuery.sparqlResultJsonRefactor import split_string_lists, remove_key_from_dict
@@ -12,10 +13,11 @@ ENDPOINT = "http://dbpedia.org/sparql"
 QUERY = "queries/query_big_noduplicate.txt"
 DATASET_PATH = "./dataset/dataset_new/"
 
-RESULT = "sparql_query_result.json"
-RESULT_PROCESSED = "processing_result.json"
-#RESULT_DATASET = "artwork_dataset.json"
-RESULT_DATASET = "artwork_dataset_goodquery.json"
+SPARQL_JSON_RESULT = "data/sparql_query_result.json"
+SPARQL_JSON_RESULT_PROCESSED = "data/processing_result.json"
+
+ARTWORK_DATASET = "data/artwork_dataset.json"
+ARTWORK_DATASET_FILTERED = "data/artwork_dataset_filtered.json"
 
 
 
@@ -35,32 +37,35 @@ GOOGLE = True
 SPLITTER_SYMBOL = " <~> "
 
 
-def main(sparql_query=False, processing=False, make_img_dataset=False, gps_request_in_dataset=False,
-         dbpedia=False, dbpedia_width=800, google=0, flickr=0, sleep_between_artwork_download=0.5):
+def main(sparql_query=False, json_processing=False, make_artwork_dataset=False, filter_artwork_dataset=False,
+         gps_request_in_dataset=False, dbpedia=False, dbpedia_width=800, google=0, flickr=0,
+         sleep_between_artwork_download=0.5):
 
     if sparql_query:
-        sparqlQueryJson(QUERY, output_json_file_path=RESULT, endpoint=ENDPOINT, offset_limit=1000)
+        sparqlQueryJson(QUERY, output_json_file_path=SPARQL_JSON_RESULT, endpoint=ENDPOINT, offset_limit=1000)
         print "Query executed!"
 
-    if processing:
-        split_string_lists(RESULT, splitter_symbol=SPLITTER_SYMBOL, output_json_path=RESULT_PROCESSED)
-        remove_key_from_dict(RESULT_PROCESSED, "value", ["type"], output_json_path=RESULT_PROCESSED)
+    if json_processing:
+        split_string_lists(SPARQL_JSON_RESULT, splitter_symbol=SPLITTER_SYMBOL, output_json_path=SPARQL_JSON_RESULT_PROCESSED)
+        remove_key_from_dict(SPARQL_JSON_RESULT_PROCESSED, "value", ["type"], output_json_path=SPARQL_JSON_RESULT_PROCESSED)
         print "Conversion done!"
 
 
-
-
-    if make_img_dataset:
-        dbpediaJSON_to_artwork_list(json_file_or_string=RESULT_PROCESSED,
-                                    out_json_file=RESULT_DATASET,
+    if make_artwork_dataset:
+        dbpediaJSON_to_artwork_list(json_file_or_string=SPARQL_JSON_RESULT_PROCESSED,
+                                    out_json_file=ARTWORK_DATASET,
                                     doGpsToAddressQuery=gps_request_in_dataset)
 
+    if filter_artwork_dataset:
+        artwork_dataset = ArtworkDataset().loadJson(ARTWORK_DATASET)
+        filtered_dataset = artwork_dataset_filtering(artwork_dataset)
+        filtered_dataset.saveJson(ARTWORK_DATASET_FILTERED)
 
 
     if dbpedia or google>0 or flickr>0:
 
         ad = ArtworkDataset(img_path=DATASET_PATH)
-        ad.loadJson(RESULT_DATASET)
+        ad.loadJson(ARTWORK_DATASET)
 
         if dbpedia:
             ad.downloadDbPediaThumbs(preferred_dim=dbpedia_width, sleep_between_artwork=sleep_between_artwork_download)
@@ -78,14 +83,17 @@ if __name__ == "__main__":
     parser = ArgumentParser()
 
     parser.add_argument("-sparql", "--sparql-query", action='store_const', const=True, dest='sparql_query', default=False,
-                        help="Execute sparql query to dbPedia, output file: " + RESULT )
+                        help="Execute sparql query to dbPedia, output file: " + SPARQL_JSON_RESULT)
 
     parser.add_argument("-proc", "--processing", action='store_const', const=True, dest='processing', default=False,
-                        help="Execute the processing on the sparql_query response, output file: " + RESULT_PROCESSED)
+                        help="Execute the processing on the sparql_query response, output file: " + SPARQL_JSON_RESULT_PROCESSED)
 
-    parser.add_argument("-make", "--make-dataset", action='store_const', const=True, dest='make_img_dataset', default=False,
-                        help="Make the artwork dataset from the processed sparql response, output file: " + RESULT_DATASET)
+    parser.add_argument("-make", "--make-dataset", action='store_const', const=True, dest='make_artwork_dataset', default=False,
+                        help="Make the artwork dataset from the processed sparql response, output file: " + ARTWORK_DATASET)
 
+    parser.add_argument("-filter", "--filter-dataset", action='store_const', const=True, dest='filter_artwork_dataset',
+                        default=False,
+                        help="Filter the image json dataset removing artworks with empty title or emprty description")
 
     parser.add_argument("-gps", "--gps-request", action='store_const', const=True, dest='gps_request_in_dataset', default=False,
                         help="Execute query to retrive location from gps information while making the dataset")
@@ -116,9 +124,9 @@ if __name__ == "__main__":
         parser.print_usage()
 
     main(sparql_query=args.sparql_query,
-         processing=args.processing,
-         make_img_dataset=args.make_img_dataset,
-
+         json_processing=args.processing,
+         make_artwork_dataset=args.make_artwork_dataset,
+         filter_artwork_dataset=args.filter_artwork_dataset,
          gps_request_in_dataset=args.gps_request_in_dataset,
 
          dbpedia=args.dbpedia,
