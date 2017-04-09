@@ -3,7 +3,7 @@ from argparse import ArgumentParser
 from artwork.artwork import ArtworkDataset
 
 DATASET_PATH = "./dataset"
-RESULT_DATASET = "artwork_dataset.json"
+RESULT_DATASET = "./data/artwork_dataset.json"
 
 
 
