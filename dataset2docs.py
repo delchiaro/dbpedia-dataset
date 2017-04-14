@@ -4,9 +4,18 @@ from artwork.artwork import ArtworkDataset
 
 
 ARTWORK_DATASET = "data/artwork_dataset_filtered_ordered.json"
-OUTPUT_TXT = "data/documents.txt"
-CLASS_FILTER_TXT = "data/list_of_included_classes.txt"
-CLASS_NAMES_FILTER_TXT = "data/list_of_included_class_names.txt"
+OUTPUT_TXT = "data/pruning/pruned_documents.txt"
+
+
+
+# CLASS_FILTER_TXT = "data/pruning/class_keep_from_pruning-train.txt"
+# CLASS_NAMES_FILTER_TXT = "data/pruning/class_names_keep_from_pruning-train.txt"
+
+# CLASS_FILTER_TXT = "data/pruning/class_keep_from_pruning-test.txt"
+# CLASS_NAMES_FILTER_TXT = "data/pruning/class_names_keep_from_pruning-test.txt"
+
+CLASS_FILTER_TXT = "data/pruning/class_keep_from_pruning-all.txt"
+CLASS_NAMES_FILTER_TXT = "data/pruning/class_names_keep_from_pruning-all.txt"
 
 
 def main():
